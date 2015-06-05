@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta content='text/html;charset=utf-8' http-equiv='content-type'>
+    <title>Game of Life</title>
+
+    <style type="text/css">
+        body { background-color: #595959; }
+        canvas { border: 1px solid #000 }
+    </style>
+</head>
+
+<body onload="gamify();">
+    <canvas id="game" width="1000" height="1000">
+    </canvas>
+</body>
+
+<script type="text/javascript">
+
+var scale = 10;
+var fps = 24;
+
+var interval = 1000 / fps; // in ms
+var timer;
+
+var GameOfLife = {
+    // Canvas
+    canvas: null,
+    ctx: null,
+
+    w: null,
+    h: null,
+
+    // Game data
+    cells: null,
+    newCells: null,
+
+    init: function() {
+        this.canvas = document.getElementById('game');
+        this.ctx    = this.canvas.getContext('2d');
+
+        this.canvas.addEventListener("mousedown", HandleClick, false);
+
+        w = this.canvas.width / scale;
+        h = this.canvas.height / scale;
+
+        this.randomizeCells();
+        this.newCells = new Array();
+    },
+
+    // Create a random field of cells
+    randomizeCells: function() {
+        nr_of_cells = w * h;
+        this.cells = new Array();
+        for (var i = 0; i < nr_of_cells; i++) {
+            this.cells[i] = Math.round(Math.random());
+            // this.cells[i] = 0;
+        }
+    },
+
+    // Draw the current state of the cells
+    draw: function() {
+        for (var ih = 0; ih < h; ih++) {
+            for (var iw = 0; iw < w; iw++) {
+                if (this.cells[iw + (w*ih)] == 0) {
+                    this.ctx.fillStyle = "rgb(20,20,20)";
+                } else {
+                    this.ctx.fillStyle = "rgb(200,200,200)";
+                }
+                this.ctx.fillRect (iw*scale, ih*scale, scale, scale);
+            }
+        }
+    },
+
+    // Calculate the next iteration for the cells
+    iterate: function() {
+        var next = new Array();
+
+        for (var i = 0; i < this.cells.length; i ++) {
+            if (this.newCells[i] == 1) {
+                next[i] = 1;
+                this.newCells[i] = 0;
+            } else {
+                next[i] = this.iterateCell(i);
+            }
+        }
+
+        // if (cellEq(this.cells, next)) {
+        //     clearInterval(timer);
+        //     console.log("Dead lock");
+        // }
+
+        this.cells = next;
+    },
+
+    iterateCell: function(index) {
+        if (this.cells[index] == 0) {
+            return this.iterateDeadCell(index);
+        } else {
+            return this.iterateAliveCell(index);
+        }
+    },
+
+    iterateDeadCell: function(index) {
+        if (this.nr_of_neighbours(index) == 3) {
+            return 1;
+        }
+        return 0;
+    },
+
+    iterateAliveCell: function(index) {
+        var n = this.nr_of_neighbours(index);
+
+        // Underpopulation
+        if (n < 2) {
+            return 0;
+        }
+
+        // Stayin' alive
+        if (n == 2 || n == 3) {
+            return 1;
+        }
+
+        // Overpopulation
+        if (n > 3) {
+            return 0;
+        }
+    },
+
+    nr_of_neighbours: function(index) {
+        var n = 0;
+
+        n += this.neighbour(index, index - 1);
+        n += this.neighbour(index, index + 1);
+
+        n += this.neighbour(index, index - w - 1);
+        n += this.neighbour(index, index - w);
+        n += this.neighbour(index, index - w + 1);
+
+        n += this.neighbour(index, index + w - 1);
+        n += this.neighbour(index, index + w);
+        n += this.neighbour(index, index + w + 1);
+
+        return n;
+    },
+
+    // Fetch the neighour value for index with target neighbour.
+    neighbour: function(index, target) {
+        return this.cells[target % this.cells.length];
+        if (target < 0 || target > this.cells.length) {
+            return 0;
+        } else {
+            return this.cells[target];
+        }
+    },
+
+    // Make a step in the game
+    step: function() {
+        this.iterate();
+        this.draw();
+    },
+
+    addCell: function(x, y) {
+        var cx = Math.round(x / scale);
+        var cy = Math.round(y / scale);
+        console.log("Adding cell at " + cx + "," + cy);
+        this.newCells[cx + (w * cy)] = 1;
+    }
+}
+
+function gamify() {
+    GameOfLife.init();
+
+    timer = setInterval(function() {
+        GameOfLife.step();
+    }, interval);
+}
+
+var HandleClick = function(event) {
+    var x = event.clientX;
+    var y = event.clientY;
+
+    x -= GameOfLife.canvas.offsetLeft;
+    y -= GameOfLife.canvas.offsetTop;
+
+    GameOfLife.addCell(x, y);
+}
+
+var cellEq = function(a, b) {
+    if (!a || !b)
+        return false;
+
+    if (a.length != b.length)
+        return false;
+
+    for (var i = 0; i < a.length; i++) {
+        if (a[i] != b[i])
+            return false;
+    }
+
+    return true;
+}
+</script>
+</html>
